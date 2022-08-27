@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{%  import "bootstrap/wtf.html" as wtf %}
+
+{% block title %}
+<title> Login </title>
+{% endblock %}
+
+{% block contents %}
+    <div class="form-container">
+        <h3>Login</h3>
+        {%  with messages = get_flashed_messages() %}
+            {% if messages %}
+                {%  for message in messages %}
+                    <p class="error">{{ message | safe() }}</p>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        {{ wtf.quick_form(form, novalidate=True, button_map={"submit": "outline-dark"}) }}
+    </div>
+{% endblock %}

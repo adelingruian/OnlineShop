@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block title %}
+<title> Shoping cart </title>
+{% endblock %}
+
+{% block contents %}
+
+    <div class="main-container">
+        {% for order_line in order_lines %}
+            <div class="row">
+                <div class="order-line col-md-6 row">
+                    <div class="col-4">
+                        <img src="{{ url_for('static', filename=order_line.item.images.main_image) }}" alt="">
+                    </div>
+                    <div class="col-8">
+                        <h3> {{ order_line.item.name }}</h3>
+                        <p>Size: {{ order_line.size.upper() }}</p>
+                        <p>Quantity: {{ order_line.quantity }}</p>
+                        <div class="buttons mt-5">
+                            <a href="{{ url_for('edit_from_cart', order_line_id=order_line.id) }}"><button type="button" class="btn btn-outline-dark">Edit</button></a>
+                            <a href="{{ url_for('delete_from_cart', order_line_id=order_line.id) }}"><button type="button" class="btn btn-danger">Delete</button></a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+
+    </div>
+
+{% endblock %}

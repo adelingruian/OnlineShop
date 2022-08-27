@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block title %}
+<title>The Dress</title>
+{% endblock %}
+
+{% block contents %}
+    <div class="main-container row">
+
+        {% for item in items %}
+
+            <div class="product-display col-lg-3 col-md-4 col-sm-6">
+                <a href={{ url_for('item', item_id=item.id) }}>
+                <div class="product-margin">
+
+                    <img src="{{ url_for('static', filename=item.images.main_image) }}" alt="">
+                    <div class="text-on-image">
+                        <p class="item-description">{{ item.name }}</p>
+                        <div class="row">
+                            {%  if item.sale_price == None  %}
+                                <h6 class="col-6 price-tag">{{ item.price }} LEI</h6>
+                            {% else %}
+                                <h6 class="col-5 price-tag"><s>{{ item.price }} LEI</s></h6>
+                                <h6 class="col-5 price-tag sale">{{ item.sale_price }} LEI</h6>
+                            {% endif %}
+                        </div>
+                        <button type="button" class="btn btn-outline-dark">Add to cart</button>
+                    </div>
+
+                </div>
+                </a>
+
+            </div>
+
+        {% endfor %}
+
+    </div>
+{% endblock %}

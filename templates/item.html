@@ -66,44 +66,45 @@
                     {% endif %}
                 </div>
                 <form method="post">
-                <p class="size">Size:</p>
-                <div class="btn-group" role="group" aria-label="Basic radio toggle button group">
-                    <input type="radio" class="btn-check" name="btnradio" id="btnradio1" value="s" autocomplete="off" {% if item.size.s == 0 %} disabled {% else %} checked {% endif %}>
-                    <label class="btn btn-outline-dark" for="btnradio1">S</label>
+                    <p class="size">Size:</p>
+                    <div class="btn-group" role="group" aria-label="Basic radio toggle button group">
+                        <input type="radio" class="btn-check" name="btnradio" id="btnradio1" value="s" autocomplete="off" {% if item.size.s == 0 %} disabled {% else %} checked {% endif %}>
+                        <label class="btn btn-outline-dark" for="btnradio1">S</label>
 
-                    <input type="radio" class="btn-check" name="btnradio" id="btnradio2" value="m" autocomplete="off" {% if item.size.m == 0 %} disabled {% else %} checked {% endif %}>
-                    <label class="btn btn-outline-dark" for="btnradio2">M</label>
+                        <input type="radio" class="btn-check" name="btnradio" id="btnradio2" value="m" autocomplete="off" {% if item.size.m == 0 %} disabled {% else %} checked {% endif %}>
+                        <label class="btn btn-outline-dark" for="btnradio2">M</label>
 
-                    <input type="radio" class="btn-check" name="btnradio" id="btnradio3" value="l" autocomplete="off" {% if item.size.l == 0 %} disabled {% else %} checked {% endif %}>
-                    <label class="btn btn-outline-dark" for="btnradio3">L</label>
+                        <input type="radio" class="btn-check" name="btnradio" id="btnradio3" value="l" autocomplete="off" {% if item.size.l == 0 %} disabled {% else %} checked {% endif %}>
+                        <label class="btn btn-outline-dark" for="btnradio3">L</label>
 
-                    <input type="radio" class="btn-check" name="btnradio" id="btnradio4" value="xl" autocomplete="off" {% if item.size.xl == 0 %} disabled {% else %} checked {% endif %}>
-                    <label class="btn btn-outline-dark" for="btnradio4">XL</label>
-                </div>
-                <div>
-                    <label class="quantity" for="quantity">Quantity:</label>
-                    <input type="number" id="quantity" name="quantity" placeholder="1">
-                    {%  with messages = get_flashed_messages() %}
-                        {% if messages %}
-                            {%  for message in messages %}
-                                <p class="error">{{ message | safe() }}</p>
-                            {% endfor %}
-                        {% endif %}
-                    {% endwith %}
-                </div>
-
-                {% if current_user.is_authenticated %}
-                <div class="row">
-                    <button type="submit" class="btn btn-outline-dark col-6">Add to cart</button>
-                </div>
-                {% else %}
-                <div class="row">
-                    <a><button type="submit" class="btn btn-outline-dark col-6">Log in to order</button></a>
+                        <input type="radio" class="btn-check" name="btnradio" id="btnradio4" value="xl" autocomplete="off" {% if item.size.xl == 0 %} disabled {% else %} checked {% endif %}>
+                        <label class="btn btn-outline-dark" for="btnradio4">XL</label>
+                    </div>
+                    <div>
+                        <label class="quantity" for="quantity">Quantity:</label>
+                        <input type="number" id="quantity" name="quantity" placeholder="1">
+                        {%  with messages = get_flashed_messages() %}
+                            {% if messages %}
+                                {%  for message in messages %}
+                                    <p class="error">{{ message | safe() }}</p>
+                                {% endfor %}
+                            {% endif %}
+                        {% endwith %}
+                    </div>
+                    {% if current_user.is_authenticated %}
+                    <div class="row">
+                        <button type="submit" class="add-to-cart btn btn-outline-dark col-6">Add to cart</button>
+                    </div>
+                </form>
+                    {% else %}
+                </form>
+                <div class="row ">
+                    <p>Log in to order</p>
+                    <a href="{{ url_for('login')}}"><button class="btn btn-outline-dark col-6">Log in</button></a>
+                    <p>If you don't have an account you can register</p>
+                    <a href="{{ url_for('register')}}"><button class="btn btn-outline-dark col-6">Register</button></a>
                 </div>
                 {% endif %}
-
-                </form>
-                <p> Mai multe detalii despre livrare</p>
             </div>
 
         </div>

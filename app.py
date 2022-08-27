@@ -177,7 +177,6 @@ def item(item_id):
 
    ## ADDING ITEM TO CART
     if request.method == 'POST':
-        print(current_user.orders is None)
         if current_user.orders is None:
             user_order = UserOrder(
                 user=current_user

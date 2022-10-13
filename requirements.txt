@@ -3,10 +3,10 @@ SQLAlchemy==1.4.40
 Werkzeug==2.2.2
 WTForms==3.0.1
 flask_sqlalchemy==2.5.1
-gunicorn==20.1.0
 flask_bootstrap==3.3.7.1
 flask_wtf==1.0.1
 flask_ckeditor==0.4.6
 email_validator==1.2.1
 flask_login==0.6.2
 gunicorn==20.1.0
+stripe==4.1.0

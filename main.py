@@ -1,6 +1,5 @@
 from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import Table
 from sqlalchemy.orm import relationship
 from flask_bootstrap import Bootstrap
 from forms import AddItemForm, LoginForm, RegisterForm

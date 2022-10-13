@@ -8,6 +8,7 @@ from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin, login_user, LoginManager, login_required, current_user, logout_user
 import os
+import stripe
 
 app = Flask(__name__)
 Bootstrap(app)
@@ -21,6 +22,9 @@ ckeditor = CKEditor(app)
 UPLOAD_FOLDER = "static/images/"
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+stripe.api_key = 'sk_test_51LbKMDLFwmEu37mfNzlusYBqfs8FeP6kbrgzozWnAxk2Svq6NrS0iSKqhpAMWxPpmZjBSvOAVOgjJIuFk0yCUPe300HxQEGLau'
+
 
 login_manager = LoginManager()
 login_manager.init_app(app)
@@ -37,17 +41,17 @@ class User(UserMixin, db.Model):
     surname = db.Column(db.String(30), nullable=False)
     email = db.Column(db.String(30), unique=True, nullable=False)
     pass_hash = db.Column(db.String(50), nullable=False)
-    orders = relationship("UserOrder", back_populates="user", uselist=False)
-    ##TODO ADD ADMIN FIELD
+    admin = db.Column(db.Boolean, default=False)
+    order = relationship("UserOrder", back_populates="user", uselist=False)
 
 
 class UserOrder(db.Model):
     __tablename__ = "user_orders"
     id = db.Column(db.Integer, primary_key=True)
-    orderlines = relationship("OrderLine", back_populates="orders")
+    orderlines = relationship("OrderLine", back_populates="order")
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"))
-    user = relationship("User", back_populates="orders")
-    ##TODO CHANGE ORDERS TO ORDER
+    user = relationship("User", back_populates="order")
+
 
 class OrderLine(db.Model):
     __tablename__ = "orderlines"
@@ -57,7 +61,7 @@ class OrderLine(db.Model):
     item_id = db.Column(db.Integer, db.ForeignKey("items.id"))
     item = relationship("Item", back_populates="orderline")
     order_id = db.Column(db.Integer, db.ForeignKey("user_orders.id"))
-    orders = relationship("UserOrder", back_populates="orderlines")
+    order = relationship("UserOrder", back_populates="orderlines")
 
 
 class Item(db.Model):
@@ -66,7 +70,9 @@ class Item(db.Model):
     name = db.Column(db.String(30), unique=True, nullable=False)
     price = db.Column(db.Float, nullable=False)
     sale_price = db.Column(db.Float)
-    description = db.Column(db.String(300))
+    description = db.Column(db.String(300), nullable=False)
+    stripe_product = db.Column(db.String(30), nullable=False)
+    stripe_price = db.Column(db.String(30), nullable=False)
     size = relationship("Size", back_populates="item", uselist=False)
     images = relationship("Images", back_populates="item", uselist=False)
     orderline = relationship("OrderLine", back_populates="item")
@@ -122,6 +128,7 @@ def index():
     list_of_items = Item.query.all()
     return render_template("index.html", items=list_of_items)
 
+
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     register_form = RegisterForm()
@@ -144,20 +151,22 @@ def register():
             flash(f'User already exists.<a href="{url}">Login here</a>')
     return render_template('register.html', form=register_form)
 
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     login_form = LoginForm()
     if login_form.validate_on_submit():
-        user = User.query.filter_by(email=login_form.email.data).first()
+        user_to_login = User.query.filter_by(email=login_form.email.data).first()
         if not user:
             url = url_for('register')
             flash(f'User is not registered. <a href="{url}">Register here</a>')
         elif check_password_hash(user.pass_hash, login_form.password.data):
-            login_user(user)
+            login_user(user_to_login)
             return redirect(url_for('index'))
         else:
             flash("Wrong password.")
     return render_template("login.html", form=login_form)
+
 
 @app.route('/logout')
 def logout():
@@ -168,22 +177,16 @@ def logout():
 @app.route('/item/<item_id>', methods=['GET', 'POST'])
 def item(item_id):
     selected_item = Item.query.get(item_id)
-    try:
-        request.args['favoriteItemID'] != 0
-        print(request.args['favoriteItemID'])
-    except:
-        pass
-
-   ## ADDING ITEM TO CART
+    # ADDING ITEM TO CART
     if request.method == 'POST':
-        if current_user.orders is None:
+        if current_user.order is None:
             user_order = UserOrder(
                 user=current_user
             )
             db.session.add(user_order)
             db.session.commit()
         else:
-            print(UserOrder.query.get(current_user.get_id()))
+            # CREATE AN ORDER IF ONE DOES NOT EXIST
             user_order = UserOrder.query.get(current_user.get_id())
 
         # FORMATING VARIABLES FROM FORM
@@ -215,18 +218,24 @@ def item(item_id):
                 flash(f"There are only {selected_item.size.xl} pieces left from size {btnradio.upper()}.")
                 return redirect(url_for('item', item_id=item_id))
 
-        new_order_line = OrderLine(
-            size=btnradio,
-            quantity=quantity_requested,
-            item=selected_item,
-            orders=user_order,
-        )
-        db.session.add(new_order_line)
+        #CHECK IF ITEM ALREADY IN SHOPING CART
+        if OrderLine.query.filter_by(item=selected_item, size=btnradio).first():
+            order_line = OrderLine.query.filter_by(item=selected_item, size=btnradio).first()
+            order_line.quantity += quantity_requested
+        else:
+            new_order_line = OrderLine(
+                size=btnradio,
+                quantity=quantity_requested,
+                item=selected_item,
+                order=user_order,
+            )
+            db.session.add(new_order_line)
         db.session.commit()
 
         return redirect(url_for('shoping_cart'))
 
     return render_template("item.html", item=selected_item)
+
 
 @app.route('/add-item', methods=['GET', 'POST'])
 def add_item():
@@ -237,14 +246,24 @@ def add_item():
     if add_item_form.validate_on_submit():
         if add_item_form.sale_price.data:
             sale_price = add_item_form.sale_price.data
+            price_for_stripe = int(sale_price) * 100
         else:
             sale_price = None
+            price_for_stripe = int(add_item_form.price.data) * 100
 
+        new_stripe_product = stripe.Product.create(name=add_item_form.name.data,
+                                                   description=add_item_form.description.data,
+                                                   images=[f"images/{add_item_form.main_image.data.filename}"])
+        new_stripe_price = stripe.Price.create(unit_amount=price_for_stripe,
+                                               currency="ron",
+                                               product=new_stripe_product.id)
         new_item = Item(
             name=add_item_form.name.data,
             price=add_item_form.price.data,
             sale_price=sale_price,
             description=add_item_form.description.data,
+            stripe_product=new_stripe_product.id,
+            stripe_price=new_stripe_price.id,
         )
         db.session.add(new_item)
 
@@ -277,10 +296,8 @@ def add_item():
 
         db.session.commit()
 
-        ## TODO MAKE A REDIRECT AFTER SUCCESFULY ADDED NEW ITEM
+        # TODO MAKE A REDIRECT AFTER SUCCESFULY ADDED NEW ITEM
         return "Succes"
-
-
 
     return render_template('add_item.html', form=add_item_form)
 
@@ -293,7 +310,8 @@ def shoping_cart():
 
     return render_template("shoping-cart.html", order_lines=order_lines)
 
-@app.route('/shoping-cart/edit', methods=['GET','POST'])
+
+@app.route('/shoping-cart/edit', methods=['GET', 'POST'])
 def edit_from_cart():
     order_line_id = request.args.get('order_line_id')
     item_to_edit = OrderLine.query.get(order_line_id).item
@@ -311,6 +329,50 @@ def delete_from_cart():
     db.session.commit()
 
     return redirect(url_for('shoping_cart'))
+
+
+@app.route('/success')
+def success():
+    return render_template('success.html')
+
+
+@app.route('/cancel')
+def cancel():
+    return render_template('cancel.html')
+
+
+
+@app.route('/create-checkout-session', methods=['GET', 'POST'])
+def create_checkout_session():
+
+    order_id = UserOrder.query.filter_by(user_id=current_user.get_id()).first().id
+    order_lines = OrderLine.query.filter_by(order_id=order_id).all()
+
+    list_of_dict = []
+
+    for orderline in order_lines:
+        new_dict_item = {
+            'price': orderline.item.stripe_price,
+            'quantity': orderline.quantity,
+        }
+        list_of_dict.append(new_dict_item)
+
+    try:
+        checkout_session = stripe.checkout.Session.create(
+            line_items=list_of_dict,
+            mode='payment',
+            success_url="http://127.0.0.1:5000/success",
+            cancel_url="http://127.0.0.1:5000/cancel",
+        )
+    except Exception as e:
+        return str(e)
+
+    return redirect(checkout_session.url, code=303)
+
+
+
+
+
 
 if __name__ == '__main__':
     app.run()
